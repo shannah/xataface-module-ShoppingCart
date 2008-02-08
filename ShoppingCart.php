@@ -1,12 +1,58 @@
 <?php
-
+/*-------------------------------------------------------------------------------
+ * Xataface Web Application Framework
+ * Copyright (C) 2005-2008 Web Lite Solutions Corp (shannah@sfu.ca)
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *-------------------------------------------------------------------------------
+ */
+ 
+/**
+ * A module that adds shopping cart functionality to any Dataface application.
+ * Any record that can be handled by the InventoryItem ontology can be added to
+ * the cart and purchased.  
+ *
+ * The initial release will include a paypal payment handler, but an api will
+ * be included to develop other payment handlers also.
+ *
+ * Requirements:
+ * -------------
+ *
+ * PHP 5+
+ * Xataface 1.0+
+ *
+ * @author Steve Hannah <steve@weblite.ca>
+ * @created December 2007
+ *
+ * Development status:
+ *	Incomplete - under development.
+ */
 class modules_ShoppingCart {
 
 
+	/**
+	 * Constructor, creates the invoice table if it doesn't exist already.
+	 */
 	public function __construct(){
 		$this->createInvoiceTable();
 	}
 
+	/**
+	 * A block (sample) that adds an "Add to cart" form in the left 
+	 * column of each page.
+	 */
 	function block__after_left_column(){
 		
 		$app =& Dataface_Application::getInstance();
@@ -29,6 +75,9 @@ END;
 	
 	
 	
+	/**
+	 * Creates a table to store invoices.
+	 */
 	function createInvoiceTable(){
 		$sql = "create table if not exists `dataface__invoices` (
 			invoiceID int(11) not null auto_increment primary key,
@@ -57,6 +106,12 @@ END;
 			
 	}
 	
+	/**
+	 * Creates an invoice for a given payment method.
+	 * @param string $paymentMethod The method of payment.
+	 * @return Dataface_Record The invoice record - a record of the invoices table.
+	 *
+	 */
 	function createInvoice($paymentMethod){
 		$cart = ShoppingCartFactory::getFactory()->loadCart();
 
