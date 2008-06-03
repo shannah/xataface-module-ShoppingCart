@@ -31,6 +31,11 @@ class actions_paypal_ipn {
 		
 		$p = new paypal_class;
 		if ( $p->validate_ipn() ){
+			ob_start();
+			print_r($p->ipn_data);
+			$d = ob_get_contents();
+			ob_end_clean();
+			mail('steve@weblite.ca', 'Paypal data', $d);
 			if ( !isset($p->ipn_data['invoice']) ){
 				error_log('Failed to validate invoice for payment because paypal did not specify an invoice in its ipn data');
 				exit;
@@ -43,9 +48,26 @@ class actions_paypal_ipn {
 				exit;
 			}
 			
+			$invoice->setValues(array(
+				'firstName' => $p->ipn_data['first_name'],
+				'lastName' => $p->ipn_data['last_name'],
+				'address1' => $p->ipn_data['address_street'],
+				
+				'city' => $p->ipn_data['address_city'],
+				'province' => $p->ipn_data['address_state'],
+				'country' => $p->ipn_data['address_country'],
+				
+				'postalCode' => $p->ipn_data['address_zip'],
+				'phone' => $p->ipn_data['contact_phone'],
+				'email' => $p->ipn_data['payer_email']
+			));
+				
+			
+			
 			$invoice->setValue('status', 'PAID');
 			$invoice->setValue('dateModified', date('Y-m-d H:i:s'));
 			$invoice->save();
+			file_put_contents('/tmp/ipn_test', 'We made it');
 			
 		}
 	}

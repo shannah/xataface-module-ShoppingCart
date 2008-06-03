@@ -96,7 +96,7 @@ class paypal_class {
    
    var $ipn_log;                    // bool: log IPN results to text file?
    
-   var $ipn_log_file;               // filename of the IPN log
+   var $ipn_log_file = '/tmp/ipn_log';               // filename of the IPN log
    var $ipn_response;               // holds the IPN response from paypal   
    var $ipn_data = array();         // array contains the POST values for IPN
    
@@ -107,11 +107,12 @@ class paypal_class {
        
       // initialization constructor.  Called when class is created.
       
-      $this->paypal_url = 'https://www.paypal.com/cgi-bin/webscr';
+      //$this->paypal_url = 'https://www.paypal.com/cgi-bin/webscr';
+      $this->paypal_url = 'https://www.sandbox.paypal.com/cgi-bin/webscr';
       
       $this->last_error = '';
       
-      $this->ipn_log_file = '.ipn_results.log';
+      $this->ipn_log_file = '/tmp/ipn_results.log';
       $this->ipn_log = true; 
       $this->ipn_response = '';
       
@@ -168,46 +169,60 @@ class paypal_class {
    }
    
    function validate_ipn() {
-
+	   require_once 'HTTP/Request.php';
+	   $req =& new HTTP_Request($this->paypal_url, array('allowRedirects'=>true, 'maxRedirects'=>10));
+	   $req->setMethod(HTTP_REQUEST_METHOD_POST);
+	   
       // parse the paypal URL
-      $url_parsed=parse_url($this->paypal_url);        
+      //$url_parsed=parse_url($this->paypal_url);        
 
       // generate the post string from the _POST vars aswell as load the
       // _POST vars into an arry so we can play with them from the calling
       // script.
-      $post_string = '';    
+      //$post_string = '';    
       foreach ($_POST as $field=>$value) { 
          $this->ipn_data["$field"] = $value;
-         $post_string .= $field.'='.urlencode(stripslashes($value)).'&'; 
+         $req->addPostData("$field", $value);
+         //$post_string .= $field.'='.urlencode(stripslashes($value)).'&'; 
       }
-      $post_string.="cmd=_notify-validate"; // append ipn command
+      $req->addPostData('cmd', '_notify-validate');
+      //$post_string.="cmd=_notify-validate"; // append ipn command
+		
 
       // open the connection to paypal
-      $fp = fsockopen($url_parsed[host],"80",$err_num,$err_str,30); 
-      if(!$fp) {
-          
+      //$fp = fsockopen($url_parsed[host],"80",$err_num,$err_str,30); 
+      $res = $req->sendRequest();
+      if(PEAR::isError($res)) {
+         
+         
          // could not open the connection.  If loggin is on, the error message
          // will be in the log.
-         $this->last_error = "fsockopen error no. $errnum: $errstr";
+         //$this->last_error = "fsockopen error no. $errnum: $errstr";
+         $this->last_error = "Failed to send request ".$res->getMessage();
          $this->log_ipn_results(false);       
          return false;
          
       } else { 
  
          // Post the data back to paypal
-         fputs($fp, "POST $url_parsed[path] HTTP/1.1\r\n"); 
-         fputs($fp, "Host: $url_parsed[host]\r\n"); 
-         fputs($fp, "Content-type: application/x-www-form-urlencoded\r\n"); 
-         fputs($fp, "Content-length: ".strlen($post_string)."\r\n"); 
-         fputs($fp, "Connection: close\r\n\r\n"); 
-         fputs($fp, $post_string . "\r\n\r\n"); 
+         //fputs($fp, "POST $url_parsed[path] HTTP/1.1\r\n"); 
+         //fputs($fp, "Host: $url_parsed[host]\r\n"); 
+         //fputs($fp, "Content-type: application/x-www-form-urlencoded\r\n"); 
+         //fputs($fp, "Content-length: ".strlen($post_string)."\r\n"); 
+         //fputs($fp, "Connection: close\r\n\r\n"); 
+         //fputs($fp, $post_string . "\r\n\r\n"); 
 
          // loop through the response from the server and append to variable
-         while(!feof($fp)) { 
-            $this->ipn_response .= fgets($fp, 1024); 
-         } 
+         //while(!feof($fp)) { 
+         //   $this->ipn_response .= fgets($fp, 1024); 
+         //} 
 
-         fclose($fp); // close connection
+         //fclose($fp); // close connection
+         $this->ipn_response = '';
+         foreach ($req->getResponseHeader() as $name => $value ){
+         	$this->ipn_response .= $name.'='.$value."\r\n";
+         }
+         $this->ipn_response .= $req->getResponseBody();
 
       }
       

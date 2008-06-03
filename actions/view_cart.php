@@ -34,13 +34,27 @@ class actions_view_cart {
 		import('modules/ShoppingCart/lib/ShoppingCart/ShoppingCart.class.php');
 		$cart = ShoppingCartFactory::getFactory()->loadCart();
 		
+		
+		$invoice = Dataface_ModuleTool::getInstance()->loadModule('modules_ShoppingCart')->createInvoice($paymentMethod);
+		if ( PEAR::isError($invoice) ) return $invoice;
+		
+		$shipping = $cart->getItemsByCategory('shipping');
+		if ( !$shipping ) $shipping = null;
+		else $shipping = df_get_record_by_id($shipping[0]->productID);
+		
+		$shippingMethods = df_get_records('dataface__shipping_methods', array('shipping_method_enabled'=>1));
+		
+		
 		$checkout = $cart->displayCheckout();
 		
 		df_register_skin('cart', 'modules/ShoppingCart/templates');
 		
 		df_display(
 			array(
-				'cart' => $checkout
+				'cart' => $checkout,
+				'shippingMethods' => $shippingMethods,
+				'currentShippingMethod' => $shipping,
+				'invoice' => $invoice
 			), 
 			'ShoppingCart/view_cart.html'
 			);

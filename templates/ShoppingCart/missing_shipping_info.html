@@ -20,21 +20,14 @@
 {* This template shows the contents of a shopping cart. *}
 {use_macro file="Dataface_Main_Template.html"}
 	{fill_slot name="main_column"}
-		<h2>Shopping Cart Contents</h2>
-		{$cart}
+		<script language="javascript" src="{$ENV.DATAFACE_URL}/js/ajaxgold.js"></script>
+		<script language="javascript" src="{$ENV.DATAFACE_URL}/modules/ShoppingCart/shipping/shipping.js"></script>
 		
-		<div id="shipping-details">
-			<h4>Current Shipping Details</h4>
-			<table class="listing">
-				<tbody>
-					<tr><th>Country</th><td>{$invoice->htmlValue('country')}</td></tr>
-					<tr><th>Province/State</th><td>{$invoice->htmlValue('province')}</td></tr>
-					<tr><th>Postal/Zip Code</th><td>{$invoice->htmlValue('postalCode')}</td></tr>
-				</tbody>
-			</table>
-			<input type="button" onclick="window.location.href='{$ENV.APPLICATION_OBJECT->url('-action=calculate_shipping')}&--change-info=1';" value="Change Shipping Details" />
+		<h2>Please Enter Your Shipping Details</h2>
+		<div class="portal-help">
+			Please enter the location where you would like to have your purchases shipped.
 		</div>
+		{$form}
 		
-		<a href="?-action=checkout">Checkout Now</a>
 	{/fill_slot}
 {/use_macro}

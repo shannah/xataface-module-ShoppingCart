@@ -42,6 +42,10 @@ class modules_ShoppingCart_Ontology_InventoryItem extends Dataface_Ontology{
 		$description = null;
 		$unitPrice = null;
 		$taxes = null;
+		$weight = null;
+		$width = null;
+		$height = null;
+		$length = null;
 		
 		if ( $this->table->getDelegate() and method_exists($this->table->getDelegate(), 'taxes') ){
 			$taxes = 'taxes';
@@ -53,6 +57,10 @@ class modules_ShoppingCart_Ontology_InventoryItem extends Dataface_Ontology{
 		foreach ( $this->table->fields(false,true) as $field ){
 			if ( isset($field['ShoppingCart.description']) ) $description = $field['name'];
 			if ( isset($field['ShoppingCart.unitPrice']) ) $unitPrice = $field['name'];
+			if ( isset($field['ShoppingCart.weight']) ) $weight = $field['name'];
+			if ( isset($field['ShoppingCart.width']) ) $width = $field['name'];
+			if ( isset($field['ShoppingCart.height']) ) $height = $field['name'];
+			if ( isset($field['ShoppingCart.length']) ) $length = $field['name'];
 			
 		}
 		
@@ -70,7 +78,7 @@ class modules_ShoppingCart_Ontology_InventoryItem extends Dataface_Ontology{
 			
 			if ( !isset($unitPrice) ){
 				foreach ( $fields as $field ){
-					echo "Checking field $field[name]";
+					//echo "Checking field $field[name]";
 					if ( $this->table->isFloat($field['name']) ){
 						$unitPrice = $field['name'];
 						break;
@@ -79,9 +87,63 @@ class modules_ShoppingCart_Ontology_InventoryItem extends Dataface_Ontology{
 			}
 		}
 		
+		if ( !isset($weight) ){
+			$fields =& $this->table->fields(false,true);
+			$candidates = preg_grep('/weight|wt/i', array_keys($fields) );
+			foreach ( $candidates as $field ){
+				if ( $this->table->isFloat($field) ){
+					$weight = $field;
+					break;
+				}
+			}
+			
+			
+		}
+		
+		if ( !isset($width) ){
+			$fields =& $this->table->fields(false,true);
+			$candidates = preg_grep('/width/i', array_keys($fields) );
+			foreach ( $candidates as $field ){
+				if ( $this->table->isFloat($field) ){
+					$width = $field;
+					break;
+				}
+			}
+			
+			
+		}
+		
+		if ( !isset($height) ){
+			$fields =& $this->table->fields(false,true);
+			$candidates = preg_grep('/height/i', array_keys($fields) );
+			foreach ( $candidates as $field ){
+				if ( $this->table->isFloat($field) ){
+					$height = $field;
+					break;
+				}
+			}
+			
+			
+		}
 		
 		
-		$atts = array('unitPrice'=>$unitPrice, 'description'=>$description, 'taxes'=>$taxes);
+		if ( !isset($length) ){
+			$fields =& $this->table->fields(false,true);
+			$candidates = preg_grep('/length/i', array_keys($fields) );
+			foreach ( $candidates as $field ){
+				if ( $this->table->isFloat($field) ){
+					$weight = $field;
+					break;
+				}
+			}
+			
+			
+		}
+		
+		
+		
+		
+		$atts = array('unitPrice'=>$unitPrice, 'description'=>$description, 'taxes'=>$taxes, 'weight'=>$weight, 'height'=>$height, 'length'=>$length);
 		foreach ($atts as $key=>$val ){
 			if ( isset($val) ){
 				$field =& $this->table->getField($val);

@@ -71,6 +71,19 @@ class ShoppingCart {
 	 */
 	var $invoiceID = null;
 	
+	/**
+	 * The amount added to the order for shipping.
+	 * @var ShoppingCartItem
+	 */
+	public $shipping = null;
+	
+	/**
+	 * The shipping method that is set to be used for this cart.
+	 * @var mixed
+	 */
+	public $shippingMethod = null;
+	
+	
 	public function setRenderer( ShoppingCartRenderer $renderer ){
 		$this->renderer = $renderer;
 	}
@@ -92,6 +105,7 @@ class ShoppingCart {
 		foreach ( $this->items as $item ){
 			$total += $item->subtotal();
 		}
+		if ( $this->shipping ) $total += $this->shipping->subtotal();
 		return round($total,2);
 	}
 	
@@ -108,13 +122,16 @@ class ShoppingCart {
 	 */
 	function taxables(){
 		$taxes = array();
-		foreach ( $this->items as $item ){
+		$items = $this->items;
+		if ( $this->shipping ) $items[] = $this->shipping;
+		foreach ( $items as $item ){
 			foreach ( $this->taxPercents as $taxName=>$taxPercent ){
 				if ( !isset($taxes[$taxName]) ) $taxes[$taxName] = 0.0;
 				if ( !@$item->taxes[$taxName] ) continue;
 				$taxes[$taxName] += $item->subtotal();
 			}
 		}
+		
 		return $taxes;
 	}
 	
@@ -172,6 +189,22 @@ class ShoppingCart {
 	 */
 	function getItem($id){
 		return $this->items[$id];
+	}
+	
+	function getItemByProductID($id){
+		foreach ($this->items as $item){
+			if ( $item->productID == $id ) return $item;
+		}
+		return null;
+	}
+	
+	function getItemsByCategory($category){
+		$out = array();
+		foreach ($this->items as $item){
+			if ( $item->category == $category ) $out[] = $item;
+			unset($item);
+		}
+		return $items;
 	}
 	
 	
@@ -250,10 +283,12 @@ class ShoppingCartItem {
 	var $description=null;
 	var $unitPrice=null;
 	var $taxes = array();
+	var $category=null;
+	var $shipping=0.0;
 
 	
 	function subtotal(){
-		return round( floatval($this->quantity)*floatval($this->unitPrice), 2);
+		return round( (floatval($this->quantity)*floatval($this->unitPrice)) + floatval($this->shipping), 2);
 	}
 	
 	
@@ -295,9 +330,10 @@ class ShoppingCartFactory {
 
 class ShoppingCartRenderer {
 	function renderCheckout( ShoppingCart $cart, $params=array() ){
-		$out = '<table id="'.htmlspecialchars(ShoppingCart_key).'-checkout">
+		//print_r($cart);exit;
+		$out = '<table id="'.htmlspecialchars(ShoppingCart_key).'-checkout" width="100%">
 				<thead>
-					<tr><th style="display:none">Product ID</th><th>Quantity</th><th>Name</th><th>Unit Price</th>';
+					<tr><th style="display:none">Product ID</th><th>Quantity</th><th>Name</th><th>Unit Price</th><th>Shipping</th>';
 					foreach ( $cart->taxPercents as $taxName => $taxPercent ){
 						$out .= '<th>'.$taxName.'</th>';
 					}
@@ -307,7 +343,9 @@ class ShoppingCartRenderer {
 				<tbody>
 				';
 		$even = false;
-		foreach ( $cart->items as $item ){
+		$items = $cart->items;
+		if ( $cart->shipping ) $items[] = $cart->shipping;
+		foreach ( $items as $item ){
 			if ( $even ){
 				$class = ShoppingCart_key.'-even-row';
 			} else {
@@ -317,15 +355,19 @@ class ShoppingCartRenderer {
 			$out .= '<tr class="'.htmlspecialchars($class).'" id="'.htmlspecialchars(ShoppingCart_key).'-'.htmlspecialchars($item->productID).'-lineitem"><td style="display:none">'.$item->productID.'</td>
 					<td align="right">'.$item->quantity.'</td>
 					<td>'.$item->description.'</td>
-					<td align="right">'.number_format($item->unitPrice,2).'</td>
+					<td align="right">'.money_format('%i',$item->unitPrice).'</td>
+					<td align="right">'.money_format('%i', $item->shipping).'</td>
 					';
 											
 			foreach ( $cart->taxPercents as $taxName => $taxPercent ){
 				$out .= '<td align="center">'.( $item->isTaxable($taxName) ? 'Y' : 'N').'</td>';
 			}
 	
-			$out .= '<td align="right">'.number_format($item->subtotal(),2).'</td></tr>';
+			$out .= '<td align="right">'.money_format('%i',$item->subtotal()).'</td></tr>';
+			//unset($item);
 		}
+		
+		
 		
 		$out .= '</tbody></table>';
 		

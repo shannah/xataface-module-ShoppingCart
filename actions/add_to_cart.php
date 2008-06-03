@@ -46,29 +46,35 @@ class actions_add_to_cart {
 		
 		if ( !$record ) return PEAR::raiseError("The record '".$_POST['--record_id']."' could not be found.");
 		
-		import('Dataface/Ontology.php');
-		Dataface_Ontology::registerType('InventoryItem', 'modules/ShoppingCart/Ontology/InventoryItem.php', 'modules_ShoppingCart_Ontology_InventoryItem');
-		$ontology = Dataface_Ontology::newOntology('InventoryItem', $record->_table->tablename);
-		
-		$inventoryItem = $ontology->newIndividual($record);
-		
-		
-		$item->productID = $record->getId();
-		$item->description = $inventoryItem->strval('description');
-		if ( !isset($item->description) ) $item->description = $record->getTitle();
-		if ( @$_POST['--quantity'] ) $item->quantity = intval($_POST['--quantity']);
-		$item->unitPrice = $inventoryItem->val('unitPrice');
-		if ( $record->_table->hasField( $ontology->getFieldname('taxes') ) ){
-			$item->taxes = $inventoryItem->val('taxes');
+		$existingItem = $cart->getItemByProductID($record->getId());
+		if ( $existingItem ){
+			$existingItem->quantity++;
 		} else {
-			$taxes = preg_grep('/^taxes\./', array_keys($action) );
-			foreach ( $taxes as $taxname ){
-				list($dump, $taxname) = explode('.', $taxname);
-				$item->taxes[$taxname] = true;
-			}	
+			
+			import('Dataface/Ontology.php');
+			Dataface_Ontology::registerType('InventoryItem', 'modules/ShoppingCart/Ontology/InventoryItem.php', 'modules_ShoppingCart_Ontology_InventoryItem');
+			$ontology = Dataface_Ontology::newOntology('InventoryItem', $record->_table->tablename);
+			
+			$inventoryItem = $ontology->newIndividual($record);
+			
+			
+			$item->productID = $record->getId();
+			$item->description = $inventoryItem->strval('description');
+			if ( !isset($item->description) ) $item->description = $record->getTitle();
+			if ( @$_POST['--quantity'] ) $item->quantity = intval($_POST['--quantity']);
+			$item->unitPrice = $inventoryItem->val('unitPrice');
+			if ( $record->_table->hasField( $ontology->getFieldname('taxes') ) ){
+				$item->taxes = $inventoryItem->val('taxes');
+			} else {
+				$taxes = preg_grep('/^taxes\./', array_keys($action) );
+				foreach ( $taxes as $taxname ){
+					list($dump, $taxname) = explode('.', $taxname);
+					$item->taxes[$taxname] = true;
+				}	
+			}
+			
+			$cart->addItem($item);
 		}
-		
-		$cart->addItem($item);
 		$cart->save();
 		
 		if ( isset( $_POST['--redirect'] ) ) $link = $_POST['--redirect'];
