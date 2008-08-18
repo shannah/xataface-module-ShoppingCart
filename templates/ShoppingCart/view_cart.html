@@ -21,20 +21,39 @@
 {use_macro file="Dataface_Main_Template.html"}
 	{fill_slot name="main_column"}
 		<h2>Shopping Cart Contents</h2>
-		{$cart}
-		
-		<div id="shipping-details">
-			<h4>Current Shipping Details</h4>
-			<table class="listing">
-				<tbody>
-					<tr><th>Country</th><td>{$invoice->htmlValue('country')}</td></tr>
-					<tr><th>Province/State</th><td>{$invoice->htmlValue('province')}</td></tr>
-					<tr><th>Postal/Zip Code</th><td>{$invoice->htmlValue('postalCode')}</td></tr>
-				</tbody>
+		{if $cartObject->items|@count > 0}
+				{$cart}
+			
+			
+			
+			{if $currentShippingMethod}
+			<table>
+				<tr><th align="left">Shipping Method:</th>
+				<td>
+					
+						{$currentShippingMethod->val('shipping_method_label')|escape} [<a href="{$ENV.APPLICATION_OBJECT->url('-action=set_shipping_method')}">Change</a>]
+					
+						
+					
+				</td>
+				
+				</tr>
+				<tr>
+				<th align="left">Destination:</th>
+				<td>
+					{$destination|escape}
+				</td>
+					
 			</table>
-			<input type="button" onclick="window.location.href='{$ENV.APPLICATION_OBJECT->url('-action=calculate_shipping')}&--change-info=1';" value="Change Shipping Details" />
-		</div>
+			{else}
+				<input type="button" onclick="window.location.href='{$ENV.APPLICATION_OBJECT->url('-action=set_shipping_method')}';" value="Next:  Select a shipping method" />
+				
+			{/if}
+			<input type="button" onclick="window.location.href='{$ENV.APPLICATION_OBJECT->url('-action=clear_cart')}';" value="Empty Cart" />
+			<a href="?-action=checkout">Checkout Now</a>
+		{else}
+			<p>There are currently no items in your cart.</p>
+		{/if}
 		
-		<a href="?-action=checkout">Checkout Now</a>
 	{/fill_slot}
 {/use_macro}

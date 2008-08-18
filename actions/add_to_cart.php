@@ -37,7 +37,6 @@ class actions_add_to_cart {
 		$cart = ShoppingCartFactory::getFactory()->loadCart();
 		
 		
-		
 		$item = ShoppingCartFactory::getFactory()->newItem();
 		
 		$app =& Dataface_Application::getInstance();
@@ -76,6 +75,10 @@ class actions_add_to_cart {
 			$cart->addItem($item);
 		}
 		$cart->save();
+		
+		
+		$scTool = Dataface_ModuleTool::getInstance()->loadModule('modules_ShoppingCart');
+		$scTool->calculateShipping();
 		
 		if ( isset( $_POST['--redirect'] ) ) $link = $_POST['--redirect'];
 		else if ( isset( $_SERVER['HTTP_REFERER'] ) ) $link = $_SERVER['HTTP_REFERER'];

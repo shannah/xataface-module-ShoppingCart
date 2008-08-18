@@ -9,15 +9,29 @@ class actions_calculate_shipping {
 		$cart = ShoppingCartFactory::getFactory()->loadCart();
 		
 		$scTool = Dataface_ModuleTool::getInstance()->loadModule('modules_ShoppingCart');
-		
+
 		$invoice = Dataface_ModuleTool::getInstance()->loadModule('modules_ShoppingCart')->createInvoice($paymentMethod);
 		if ( PEAR::isError($invoice) ) return $invoice;
 		
 		// Now we need to make sure that we have all of the information that we need
 		
-		$requiredFields = array(
-			'province', 'postalCode', 'country', 'shipping_method'
-		);
+		$shippingMethod = $scTool->getShippingMethod();
+
+		if ( !$shippingMethod ){
+			header('Location:'.$app->url('-action=set_shipping_method'));
+			exit;
+		}
+
+		$handler = $scTool->getShippingHandler();
+		if ( method_exists($handler, 'getRequiredFields') ){
+			$requiredFields = $handler->getRequiredFields( $shippingMethod->val('shipping_method_name'));
+		}
+		else {
+		
+			$requiredFields = array(
+				'province', 'postalCode', 'country'
+			);
+		}
 		$missing = false;
 		foreach ($requiredFields as $field){
 			if ( !$invoice->val($field) ){
@@ -35,7 +49,19 @@ class actions_calculate_shipping {
 			// some required information about the destination is missing
 			// We need to collect it.
 			
-			$locations = simplexml_load_file(DATAFACE_PATH.'/modules/ShoppingCart/shipping/locations.xml');
+			$locationPaths = array(
+				DATAFACE_PATH.'/modules/ShoppingCart/shipping/handlers/'.basename($shippingMethod->val('shipping_method_name')).'_locations.xml',
+				DATAFACE_PATH.'/modules/ShoppingCart/shipping/locations.xml');
+			foreach ($locationPaths as $path){
+				if (file_exists($path) ){
+					$locations = simplexml_load_file($path);
+					break;
+				}
+			}
+			if ( !$locations ){
+				return PEAR::raiseError("Could not find any valid locations");
+			}
+			
 			//echo $locations->country[0]['name'];
 			
 			$countries = array();
@@ -44,29 +70,30 @@ class actions_calculate_shipping {
 			}
 
 
-			$shippingMethods = $scTool->getShippingMethods(array('shipping_method_enabled'=>1));
-			$methods = array();
-			foreach ($shippingMethods as $sm){
-				$methods[$sm->val('shipping_method_name')] = $sm->val('shipping_method_label');
-			}
-
+			
 			import('HTML/QuickForm.php');
 			$form =& new HTML_QuickForm('shipping_details', 'POST');
-			$form->addElement('select', 'country', 'Country',$countries, array('onchange'=>'updateProvinces(this);', 'id'=>'country-select'));
-			$form->addElement('select', 'province', 'Province',array(),array('id'=>'province-select'));
+			if ( in_array('country', $requiredFields) ){
+				$form->addElement('select', 'country', 'Country',$countries, array('onchange'=>'updateProvinces(this);', 'id'=>'country-select'));
+				$form->setDefaults(array('country'=>$invoice->val('country')));
+			}
 			
-			$form->addElement('text', 'postalCode', 'Postal Code');
-			$form->addElement('select', 'shipping_method', 'Shipping Method', $methods);
+			if ( in_array('province', $requiredFields) ){
+				$form->addElement('select', 'province', 'Province',array(),array('id'=>'province-select'));
+				$form->setDefaults(array('province'=>$invoice->val('province')));
+			}
+			
+			if ( in_array('postalCode', $requiredFields) ){
+				$form->addElement('text', 'postalCode', 'Postal Code');
+				$form->setDefaults(array('postalCode'=>$invoice->val('postalCode')));
+			}
+			
+
 			$form->addElement('submit', 'calculate', 'Calculate Shipping Now');
 			$form->addElement('hidden', '-action', 'calculate_shipping');
 			$form->addElement('hidden', '--change-info', @$_REQUEST['--change-info']);
 			
-			$form->setDefaults(array(
-				'province' => $invoice->val('province'),
-				'country' => $invoice->val('country'),
-				'postalCode' => $invoice->val('postalCode'),
-				'shipping_method' => ($scTool->getShippingMethod() ? $scTool->getShippingMethod()->val('shipping_method_name') : null)
-			));
+			
 			
 			foreach ( $requiredFields as $field ){
 				
@@ -78,15 +105,10 @@ class actions_calculate_shipping {
 				$invoice->setValues(array(
 					'province' => $vals['province'],
 					'postalCode' => $vals['postalCode'],
-					'country' => $vals['country'],
-					'shipping_method' => $vals['shipping_method']
+					'country' => $vals['country']
 				));
 				
 
-				$scTool->setShippingMethod($vals['shipping_method']);
-
-				$cart->shippingMethod = $vals['shipping_method'];
-				$cart->save();
 				$invoice->save();
 				
 				//  Now that we should have all of the required destination information
@@ -106,15 +128,12 @@ class actions_calculate_shipping {
 			df_display(array('form'=>$form_output), 'ShoppingCart/missing_shipping_info.html');
 			exit;
 		}
-	
+
 						//print_r($scTool->getShippingMethod()->vals());exit;
-		$p = $params['action'];
+		$res = $scTool->calculateShipping();
 		
-		$p = array_merge($p, $scTool->getShippingMethod()->vals(), $invoice->vals());
-		
-		
-		$res = call_user_func($scTool->getShippingHandler(), $p);
-		
+		header('Location: '.$app->url('-action=view_cart').'&--msg='.urlencode('Shipping has been calculated.'));
+		exit;
 		print_r($cart);
 		echo "here";exit;
 		

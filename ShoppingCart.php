@@ -1,4 +1,7 @@
 <?php
+define('dataface_modules_ShoppingCart_defaultSourceCountry', 'CA');
+define('dataface_modules_ShoppingCart_defaultSourceProvince', 'BC');
+define('dataface_modules_ShoppingCart_defaultSourcePostalCode', 'V3J 7E3');
 /*-------------------------------------------------------------------------------
  * Xataface Web Application Framework
  * Copyright (C) 2005-2008 Web Lite Solutions Corp (shannah@sfu.ca)
@@ -39,6 +42,7 @@
  * Development status:
  *	Incomplete - under development.
  */
+import('modules/ShoppingCart/lib/ShoppingCart/ShoppingCart.class.php');
 class modules_ShoppingCart {
 
 	public $shippingMethod = null;
@@ -53,18 +57,55 @@ class modules_ShoppingCart {
 			$this->createShippingTable();
 			$_SESSION['modules_ShoppingCart.tables_created'] = true;
 		} 
+		
+		
+	}
+	
+	
+	function ups_types(){
+		return array('CA'=>'Canada', 'US'=>'United States');
+	}
+	
+	
+	function block__shipping_method($params=array()){
+		$app =& Dataface_Application::getInstance();
+		$scTool = Dataface_ModuleTool::getInstance()->loadModule('modules_ShoppingCart');
+		$methods = $scTool->getShippingMethods();
+		$curr = $scTool->getShippingMethod();
+		
+		echo '<form method="post" action="'.DATAFACE_SITE_HREF.'">
+			<input type="hidden" name="-action" value="set_shipping_method" />
+			
+			<select name="--shipping_method" onchange="this.form.submit()">';
+			
+		foreach ($methods as $method){
+			$selected = ( $curr and $method->val('shipping_method_name') == $curr->val('shipping_method_name') ) ? 'selected':'';
+			echo '<option value="'.htmlspecialchars($method->val('shipping_method_name')).'" '.$selected.'>'.htmlspecialchars($method->val('shipping_method_label')).'</option>';
+		}
+		
+		echo '</select>
+		<input type="submit" value="Calculate Shipping" />
+			</form>';
 	}
 
+	
 	/**
 	 * A block (sample) that adds an "Add to cart" form in the left 
 	 * column of each page.
 	 */
-	function block__after_left_column(){
-		
+	function block__add_to_cart($params=array()){
 		$app =& Dataface_Application::getInstance();
-		$record =& $app->getRecord();
+		if ( @$params['record'] ) $record = $params['record'];
+		
+		else 
+			$record =& $app->getRecord();
 		if ( $record and $record->_table->implementsOntology('InventoryItem') ){
 			$record_id = htmlspecialchars($record->getId());
+			if ( @$params['redirect'] ){
+				$redirect = '<input type="hidden" name="--redirect" value="'.htmlspecialchars($params['redirect']).'" />';
+			} else {
+				$redirect = '';
+			}
 			echo <<<END
 			<div>
 				<form method="post" action="{$_SERVER['PHP_SELF']}">
@@ -72,13 +113,16 @@ class modules_ShoppingCart {
 					Qty: <input type="text" size="2" name="--quantity" value="1" />
 					<input type="hidden" name="--record_id" value="$record_id" />
 					<input type="submit" name="submit" value="Add to Cart" />
+					$redirect
 				</form>
 			</div>
 END;
 		}
 	}
 	
-	
+	function block__after_left_column(){
+		return $this->block__add_to_cart();
+	}
 	
 	
 	/**
@@ -199,12 +243,12 @@ END;
 		if ( !isset($this->shippingMethod) ){
 			$cart = ShoppingCartFactory::getFactory()->loadCart();
 			$methodName = $cart->shippingMethod;
-			$query = array('shipping_method_enabled'=>1,'-limit'=>1);
-			if ( $methodName ){
-				$query['shipping_method_name'] = $methodName;
+			if ( $methodName){
+				$query = array('shipping_method_enabled'=>1,'-limit'=>1, 'shipping_method_name'=>'='.$methodName);
+			
+				$methods = $this->getShippingMethods($query);
+				if ( $methods ) $this->setShippingMethod($methods[0]);
 			}
-			$methods = $this->getShippingMethods($query);
-			if ( $methods ) $this->setShippingMethod($methods[0]);
 		}
 		return $this->shippingMethod;
 	}
@@ -232,6 +276,10 @@ END;
 			$cart = ShoppingCartFactory::getFactory()->loadCart();
 			$cart->shippingMethod = $this->shippingMethod->val('shipping_method_name');
 			$cart->save();
+			
+			$invoice =& $this->createInvoice();
+			$invoice->setValue('shipping_method', $this->shippingMethod->val('shipping_method_name'));
+			$invoice->save();
 		} else {
 			return PEAR::raiseError("The shipping method with id $methodID could not be applied because either it does not exist or it is not enabled");
 		}
@@ -316,14 +364,8 @@ END;
 	
 	
 	/**
-	 * Returns a callback that can be used to calculate the shipping for the current
-	 * handler.
+	 * Returns a shipping handler class.
 	 *
-	 * @example
-	 * <code>
-	 * $handler = $this->getShippingHandler();
-	 * call_user_func($handler);
-	 * </code>
 	 */
 	function getShippingHandler(){
 		$method = $this->getShippingMethod();
@@ -333,13 +375,17 @@ END;
 		import('modules/ShoppingCart/shipping/handlers/'.basename($module).'.php');
 		$classname = 'modules_ShoppingCart_shipping_handlers_'.basename($module);
 		$handler = new $classname;
-		$funcName = 'calculate_'.$method->val('shipping_method_name');
-		return array($handler, $funcName);
+		return $handler;
+		//$funcName = 'calculate_'.$method->val('shipping_method_name');
+		//return array($handler, $funcName);
 	}
 	
 	
+	/**
+	 * Returns the total weight of the shopping cart.
+	 */
 	function getTotalWeight(){
-		import('modules/ShoppingCart/lib/ShoppingCart/ShoppingCart.class.php');
+		
 		$cart = ShoppingCartFactory::getFactory()->loadCart();
 		
 		import('Dataface/Ontology.php');
@@ -368,6 +414,96 @@ END;
 		
 		return $weight;
 	}
+	
+	
+	/**
+	 * Indicates whether shipping is mandatory for the shopping cart.
+	 * Default is false, but this can be override by setting the 
+	 * isShippingMandatory directive in the [ShoppingCart] section
+	 * of the conf.ini file, or be defining the isShippingMandatory()
+	 * method in the application delegate class.
+	 *
+	 * If this value is set to false then the user will be able to check out
+	 * without specifying a shipping method - and ideed he won't be asked
+	 * to specify a shipping method.
+	 *
+	 * If this value is true then the user will be obliged to select a shipping
+	 * method before he can check out.
+	 *
+	 * @return boolean
+	 */
+	function isShippingMandatory(){
+		$app =& Dataface_Application::getInstance();
+		$delegate =& $app->getDelegate();
+		
+		if ( $delegate and method_exists($delegate, 'isShippingMandatory') ){
+			return $delegate->isShippingMandatory();
+		}
+		
+		if ( isset($app->_conf['ShoppingCart']['isShippingMandatory']) ){
+			return $app->_conf['ShoppingCart']['isShippingMandatory'];
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * Returns the name of the default shipping method.  If this value is
+	 * set then the shipping method will be set to this default shipping method.
+	 * 
+	 * This value can be defined either in the conf.ini file by setting the 
+	 * defaultShippingMethod directive of the [ShoppingCart] section
+	 * to the name of the default shipping method, or by defining the getDefaultShippingMethod()
+	 * method in the application delegate class.
+	 *
+	 * @return string The name of the default shipping method.
+	 */
+	function getDefaultShippingMethod(){
+		$app =& Dataface_Application::getInstance();
+		$delegate =& $app->getDelegate();
+		
+		if ( $delegate and method_exists($delegate, 'getDefaultShippingMethod') ){
+			return $delegate->getDefaultShippingMethod();
+		}
+		
+		if ( isset($app->_conf['ShoppingCart']['defaultShippingMethod']) ){
+			return $app->_conf['ShoppingCart']['defaultShippingMethod'];
+		}
+		
+		return null;
+	}
+	
+	
+	function calculateShipping($params=array()){
+		$app = Dataface_Application::getInstance();
+		
+		$invoice = $this->createInvoice(null);
+		$params2 = $app->_conf['ShoppingCart'];
+		$params2['dest.country'] = $invoice->val('country');
+		$params2['dest.province'] = $invoice->val('province');
+		$params2['dest.postalCode'] = $invoice->val('postalCode');
+		
+		$params = array_merge($params2, $params);
+		
+		if ( !isset($params['source.country']) ){
+			$params['source.country'] = dataface_modules_ShoppingCart_defaultSourceCountry;
+		}
+		
+		if ( !isset($params['source.province']) ){
+			$params['source.province'] = dataface_modules_ShoppingCart_defaultSourceProvince;
+		}
+		
+		if ( !isset($params['source.postalCode']) ){
+			$params['source.postalCode'] = dataface_modules_ShoppingCart_defaultSourcePostalCode;
+		}
+	
+		$handler = $this->getShippingHandler();
+		$method = $this->getShippingMethod();
+		if ( $handler and $method ){
+			return $handler->calculateShipping($method->val('shipping_method_name'), $params);
+		}
+	}
+	
 	
 	
 	
