@@ -82,6 +82,7 @@ class actions_add_to_cart {
 		
 		if ( isset( $_POST['--redirect'] ) ) $link = $_POST['--redirect'];
 		else if ( isset( $_SERVER['HTTP_REFERER'] ) ) $link = $_SERVER['HTTP_REFERER'];
+		else $link = DATAFACE_SITE_HREF.'?-action=view_cart';
 		
 		if ( strpos($link, '?') === false ) $link .= '?';
 		$link .= '&--msg=The item was successfully added to the cart';

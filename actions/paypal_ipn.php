@@ -41,7 +41,7 @@ class actions_paypal_ipn {
 				exit;
 			}
 			
-			$invoiceID = $p->ipn_data['invoice'];
+			list($appid,$invoiceID) = explode('.',$p->ipn_data['invoice']);
 			$invoice = df_get_record('dataface__invoices', array('invoiceID'=>$invoiceID));
 			if ( !$invoice ){
 				error_log('Failed to validate invoice for payment of invoice id '.$invoiceID.' because the invoice does not exist.');
@@ -63,8 +63,12 @@ class actions_paypal_ipn {
 			));
 				
 			
-			
-			$invoice->setValue('status', 'PAID');
+			if ( $p->ipn_data['payment_status'] == 'Completed' ){
+				$invoice->setValue('status', 'PAID');
+			} else {
+				$invoice->setValue('status', 'PROCESSING');
+				$invoice->setValue('status_note', @$p->ipn_data['pending_reason']);
+			}
 			$invoice->setValue('dateModified', date('Y-m-d H:i:s'));
 			$invoice->save();
 			file_put_contents('/tmp/ipn_test', 'We made it');

@@ -1,0 +1,27 @@
+{use_macro file="Dataface_Main_Template.html"}
+	{fill_slot name="main_section"}
+	
+		<h2>My Invoices</h2>
+		
+		<table class="listing">
+		<thead>
+			<tr><th>Invoice ID</th><th>Date Created</th><th>Date Modified</th><th>Amount</th><th>Payment Method</th><th>Status</th></tr>
+		</thead>
+		<tbody>
+		{foreach from=$invoices item=invoice}
+			<tr>
+				<td>{$invoice->val('invoiceID')|escape}</td>
+				<td>{$invoice->strval('dateCreated')|escape}</td>
+				<td>{$invoice->strval('dateModified')|escape}</td>
+				<td>{$invoice->val('amount')|escape}</td>
+				<td>{$invoice->val('paymentMethod')|escape}</td>
+				<td>{$invoice->val('status')|escape}</td>
+			</tr>
+		
+		{/foreach}
+		</tbody>
+		</table>
+	{/fill_slot}
+
+	
+{/use_macro}

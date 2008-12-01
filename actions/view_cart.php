@@ -33,7 +33,15 @@ class actions_view_cart {
 	function handle(&$params){
 		import('modules/ShoppingCart/lib/ShoppingCart/ShoppingCart.class.php');
 		$cart = ShoppingCartFactory::getFactory()->loadCart();
+		$app =& Dataface_Application::getInstance();
+		if ( isset($app->_conf['ShoppingCart_taxes']) ){
+			$cart->taxPercents = $app->_conf['ShoppingCart_taxes'];
+		}
 		
+		if ( $app->prefs['ShoppingCart_disableShipping'] ){
+			$cart->shippingEnabled = false;
+		}
+		$cart->save();
 		$scTool = Dataface_ModuleTool::getInstance()->loadModule('modules_ShoppingCart');
 		$invoice = Dataface_ModuleTool::getInstance()->loadModule('modules_ShoppingCart')->createInvoice($paymentMethod);
 		if ( PEAR::isError($invoice) ) return $invoice;

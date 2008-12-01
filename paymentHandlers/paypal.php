@@ -31,7 +31,11 @@
 class Dataface_modules_ShoppingCart_paymentHandlers_paypal {
 	
 	function checkout(Dataface_Record $invoice, $params=array()){
-	
+		$app =& Dataface_Application::getInstance();
+		if ( isset($app->_conf['application_id']) ) $appid = $app->_conf['application_id'];
+		else $appid = '0';
+		
+		
 		$cart = unserialize($invoice->val('data'));
 		$action =& $params['action'];
 		
@@ -74,10 +78,11 @@ class Dataface_modules_ShoppingCart_paymentHandlers_paypal {
 		if ( $invoice->val('email') ) $p->add_field('email', $invoice->val('email'));
 		
 		$p->add_field('notify_url', $_SERVER['HOST_URI'].DATAFACE_SITE_HREF.'?-action=paypal_ipn');
-		$p->add_field('invoice', $invoice->val('invoiceID'));
+		$p->add_field('invoice',$appid.'.'. $invoice->val('invoiceID'));
 		$p->add_field('return', $_SERVER['HOST_URI'].DATAFACE_SITE_HREF.'?-action=payment_complete');
 		$p->add_field('cancel_return', $_SERVER['HOST_URI'].DATAFACE_SITE_HREF.'?-action=payment_cancelled');
 		
+	
 		
 		$p->submit_paypal_post();
 		

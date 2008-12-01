@@ -1,0 +1,10 @@
+{use_macro file="Dataface_Main_Template.html"}
+	{fill_slot name="main_section"}
+		{define_slot name="payment_complete_page"}
+		{block name="payment_complete_header"}
+		<h2>Payment Complete</h2>
+		<p>Thank you for your payment.  You can review your account invoices <a href="{$ENV.DATAFACE_SITE_HREF}?-action=invoices">here</a>.</p>
+		{block name="payment_complete_footer"}
+		{/define_slot}
+	{/fill_slot}
+{/use_macro}

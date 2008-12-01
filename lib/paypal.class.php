@@ -107,8 +107,8 @@ class paypal_class {
        
       // initialization constructor.  Called when class is created.
       
-      //$this->paypal_url = 'https://www.paypal.com/cgi-bin/webscr';
-      $this->paypal_url = 'https://www.sandbox.paypal.com/cgi-bin/webscr';
+      $this->paypal_url = 'https://www.paypal.com/cgi-bin/webscr';
+      //$this->paypal_url = 'https://www.sandbox.paypal.com/cgi-bin/webscr';
       
       $this->last_error = '';
       

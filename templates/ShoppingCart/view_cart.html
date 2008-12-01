@@ -19,35 +19,36 @@
  *}
 {* This template shows the contents of a shopping cart. *}
 {use_macro file="Dataface_Main_Template.html"}
-	{fill_slot name="main_column"}
+	{fill_slot name="main_section"}
 		<h2>Shopping Cart Contents</h2>
 		{if $cartObject->items|@count > 0}
 				{$cart}
 			
 			
-			
-			{if $currentShippingMethod}
-			<table>
-				<tr><th align="left">Shipping Method:</th>
-				<td>
-					
-						{$currentShippingMethod->val('shipping_method_label')|escape} [<a href="{$ENV.APPLICATION_OBJECT->url('-action=set_shipping_method')}">Change</a>]
-					
+			{if !$ENV.prefs.ShoppingCart_disableShipping}
+				{if $currentShippingMethod}
+				<table>
+					<tr><th align="left">Shipping Method:</th>
+					<td>
 						
+							{$currentShippingMethod->val('shipping_method_label')|escape} [<a href="{$ENV.APPLICATION_OBJECT->url('-action=set_shipping_method')}">Change</a>]
+						
+							
+						
+					</td>
 					
-				</td>
-				
-				</tr>
-				<tr>
-				<th align="left">Destination:</th>
-				<td>
-					{$destination|escape}
-				</td>
+					</tr>
+					<tr>
+					<th align="left">Destination:</th>
+					<td>
+						{$destination|escape}
+					</td>
+						
+				</table>
+				{else}
+					<input type="button" onclick="window.location.href='{$ENV.APPLICATION_OBJECT->url('-action=set_shipping_method')}';" value="Next:  Select a shipping method" />
 					
-			</table>
-			{else}
-				<input type="button" onclick="window.location.href='{$ENV.APPLICATION_OBJECT->url('-action=set_shipping_method')}';" value="Next:  Select a shipping method" />
-				
+				{/if}
 			{/if}
 			<input type="button" onclick="window.location.href='{$ENV.APPLICATION_OBJECT->url('-action=clear_cart')}';" value="Empty Cart" />
 			<a href="?-action=checkout">Checkout Now</a>

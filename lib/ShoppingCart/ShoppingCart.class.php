@@ -84,6 +84,9 @@ class ShoppingCart {
 	public $shippingMethod = null;
 	
 	
+	
+	public $shippingEnabled = true;
+	
 	public function setRenderer( ShoppingCartRenderer $renderer ){
 		$this->renderer = $renderer;
 	}
@@ -333,11 +336,11 @@ class ShoppingCartRenderer {
 		//print_r($cart);exit;
 		$out = '<table id="'.htmlspecialchars(ShoppingCart_key).'-checkout" width="100%">
 				<thead>
-					<tr><th style="display:none">Product ID</th><th>Quantity</th><th>Name</th><th>Unit Price</th><th>Shipping</th>';
+					<tr><th style="display:none">Product ID</th><th class="ShoppingCart-quantity">Quantity</th><th class="ShoppingCart-name">Name</th><th class="ShoppingCart-price">Unit Price</th>'.($this->shippingEnabled?'<th class="ShoppingCart-shipping">Shipping</th>':'').'';
 					foreach ( $cart->taxPercents as $taxName => $taxPercent ){
-						$out .= '<th>'.$taxName.'</th>';
+						$out .= '<th class="ShoppingCart-tax">'.$taxName.'</th>';
 					}
-					$out .= '<th>Total</th>
+					$out .= '<th class="ShoppingCart-total">Total</th>
 					</tr>
 				<thead>
 				<tbody>
@@ -356,7 +359,7 @@ class ShoppingCartRenderer {
 					<td align="right">'.$item->quantity.'</td>
 					<td>'.$item->description.'</td>
 					<td align="right">'.money_format('%i',$item->unitPrice).'</td>
-					<td align="right">'.money_format('%i', $item->shipping).'</td>
+					'.($this->shippingEnabled?'<td align="right">'.money_format('%i', $item->shipping).'</td>':'').'
 					';
 											
 			foreach ( $cart->taxPercents as $taxName => $taxPercent ){
@@ -371,7 +374,7 @@ class ShoppingCartRenderer {
 		
 		$out .= '</tbody></table>';
 		
-		$out .= '<table>
+		$out .= '<table id="ShoppingCart-totals">
 			<tr><th align="left">Subtotal</th><td>'.number_format($cart->subtotal(),2).'</td></tr>';
 		foreach ( $cart->taxes() as $taxName => $amount ){
 			$out .= '<tr><th align="left">'.$taxName.'</th><td align="right">'.number_format($amount,2).'</td></tr>';

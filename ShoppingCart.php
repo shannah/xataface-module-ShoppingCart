@@ -57,6 +57,16 @@ class modules_ShoppingCart {
 			$this->createShippingTable();
 			$_SESSION['modules_ShoppingCart.tables_created'] = true;
 		} 
+		$cart = ShoppingCartFactory::getFactory()->loadCart();
+
+		if ( isset($cart->invoiceID) ){
+			$invoice = df_get_record('dataface__invoices', array('invoiceID'=>$cart->invoiceID));
+			if ( $invoice and $invoice->val('status') != 'PENDING' ){
+				$cart->emptyCart();
+				
+			}
+		}
+		
 		
 		
 	}
@@ -133,7 +143,8 @@ END;
 			invoiceID int(11) not null auto_increment primary key,
 			dateCreated datetime default null,
 			dateModified datetime default null,
-			`status` enum('PENDING','PAID','APPROVED') not null default 'PENDING',
+			`status` enum('PENDING','PROCESSING','PAID','APPROVED') not null default 'PENDING',
+			`status_note` varchar(255) default null,
 			`amount` decimal(10,2) not null,
 			`paymentMethod` varchar(32) not null,
 			`referenceID` varchar(64) default null,
@@ -204,13 +215,15 @@ END;
 			$invoice->setValue('username', Dataface_AuthenticationTool::getInstance()->getLoggedInUsername());
 			$invoice->save();
 			
-			// Now that the invoice is saved, we can set its invoice id to the cart
-			$cart->invoiceID = $invoice->getValue('invoiceID');
-			$invoice->setValue('data', serialize($cart));
-			$cart->save();
-			$invoice->save();
+			
 		
 		}
+		// Now that the invoice is saved, we can set its invoice id to the cart
+		$cart->invoiceID = $invoice->getValue('invoiceID');
+		$invoice->setValue('data', serialize($cart));
+		$cart->save();
+		$invoice->save();
+		
 		if ( !$invoice ){
 			return PEAR::raiseError("Failed to create invoice");
 		}
