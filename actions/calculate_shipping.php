@@ -1,4 +1,10 @@
 <?php
+/**
+ * This action allows the user to calculate the shipping charge for his order.
+ *
+ * @created May 2008
+ * @author Steve Hannah <steve@weblite.ca>
+ */
 class actions_calculate_shipping {
 	function handle(&$params){
 	
@@ -18,6 +24,8 @@ class actions_calculate_shipping {
 		$shippingMethod = $scTool->getShippingMethod();
 
 		if ( !$shippingMethod ){
+			// The shipping method hasn't been set yet, so we need to redirect to the form
+			// for the user to set his shipping method.
 			header('Location:'.$app->url('-action=set_shipping_method'));
 			exit;
 		}

@@ -72,11 +72,18 @@ class modules_ShoppingCart {
 	}
 	
 	
+	/**
+	 * Return an array of the countries where UPS is shippable to.
+	 */
 	function ups_types(){
 		return array('CA'=>'Canada', 'US'=>'United States');
 	}
 	
 	
+	
+	/**
+	 * A block with a form to set the shipping method.
+	 */
 	function block__shipping_method($params=array()){
 		$app =& Dataface_Application::getInstance();
 		$scTool = Dataface_ModuleTool::getInstance()->loadModule('modules_ShoppingCart');
@@ -169,6 +176,9 @@ END;
 			
 	}
 	
+	/**
+	 * Creates the shipping methods table.
+	 */
 	function createShippingTable(){
 	
 		$sql = "create table if not exists `dataface__shipping_methods` (

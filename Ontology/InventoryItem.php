@@ -47,7 +47,7 @@ class modules_ShoppingCart_Ontology_InventoryItem extends Dataface_Ontology{
 		$height = null;
 		$length = null;
 		
-		if ( $this->table->getDelegate() and method_exists($this->table->getDelegate(), 'taxes') ){
+		if ( $this->table->getDelegate() and method_exists($this->table->getDelegate(), 'field__taxes') ){
 			$taxes = 'taxes';
 		} else {
 			$taxes = null;
