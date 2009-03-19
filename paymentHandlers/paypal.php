@@ -57,15 +57,19 @@ class Dataface_modules_ShoppingCart_paymentHandlers_paypal {
 		$p->add_field('currency_code', $action['currency_code']);
 		
 		$i = 0;
-		foreach ( $cart->items as $item ){
+		$items = $cart->items;
+		if ( $cart->shippingEnabled ) $items[] = $cart->shipping;
+		foreach ( $items as $item ){
 			$i++;
 			
-			$p->add_field('tax_'.$i, $item->tax($cart->taxPercents));
+			$p->add_field('tax_'.$i, $item->tax($cart->taxPercents, false));
 			$p->add_field('amount_'.$i, $item->unitPrice);
 			$p->add_field('quantity_'.$i, $item->quantity);
 			$p->add_field('item_name_'.$i, $item->description);
 			$p->add_field('item_number_'.$i, $item->productID);
 		}
+		
+		//print_r($p);exit;
 		
 		if ( $invoice->val('address1') ) $p->add_field('address1', $invoice->val('address1'));
 		if ( $invoice->val('address2') ) $p->add_field('address2', $invoice->val('address2'));

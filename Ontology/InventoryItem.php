@@ -91,9 +91,11 @@ class modules_ShoppingCart_Ontology_InventoryItem extends Dataface_Ontology{
 			$fields =& $this->table->fields(false,true);
 			$candidates = preg_grep('/weight|wt/i', array_keys($fields) );
 			foreach ( $candidates as $field ){
+				
 				if ( $this->table->isFloat($field) ){
 					$weight = $field;
-					break;
+					if ( $field == 'weight' )
+						break;
 				}
 			}
 			
@@ -104,9 +106,12 @@ class modules_ShoppingCart_Ontology_InventoryItem extends Dataface_Ontology{
 			$fields =& $this->table->fields(false,true);
 			$candidates = preg_grep('/width/i', array_keys($fields) );
 			foreach ( $candidates as $field ){
+				
 				if ( $this->table->isFloat($field) ){
+				echo "<b>[$field]</b>";
 					$width = $field;
-					break;
+					if ( $field == 'width' )
+						break;
 				}
 			}
 			
@@ -119,7 +124,8 @@ class modules_ShoppingCart_Ontology_InventoryItem extends Dataface_Ontology{
 			foreach ( $candidates as $field ){
 				if ( $this->table->isFloat($field) ){
 					$height = $field;
-					break;
+					if ( $field == 'height' )
+						break;
 				}
 			}
 			
@@ -132,8 +138,9 @@ class modules_ShoppingCart_Ontology_InventoryItem extends Dataface_Ontology{
 			$candidates = preg_grep('/length/i', array_keys($fields) );
 			foreach ( $candidates as $field ){
 				if ( $this->table->isFloat($field) ){
-					$weight = $field;
-					break;
+					$length = $field;
+					if ( $field == 'length' )
+						break;
 				}
 			}
 			
@@ -143,7 +150,7 @@ class modules_ShoppingCart_Ontology_InventoryItem extends Dataface_Ontology{
 		
 		
 		
-		$atts = array('unitPrice'=>$unitPrice, 'description'=>$description, 'taxes'=>$taxes, 'weight'=>$weight, 'height'=>$height, 'length'=>$length);
+		$atts = array('unitPrice'=>$unitPrice, 'description'=>$description, 'taxes'=>$taxes, 'weight'=>$weight, 'height'=>$height, 'length'=>$length, 'width'=>$width);
 		foreach ($atts as $key=>$val ){
 			if ( isset($val) ){
 				$field =& $this->table->getField($val);

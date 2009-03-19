@@ -87,7 +87,7 @@ class modules_ShoppingCart {
 	function block__shipping_method($params=array()){
 		$app =& Dataface_Application::getInstance();
 		$scTool = Dataface_ModuleTool::getInstance()->loadModule('modules_ShoppingCart');
-		$methods = $scTool->getShippingMethods();
+		$methods = $scTool->getShippingMethods(array('shipping_method_enabled'=>1));
 		$curr = $scTool->getShippingMethod();
 		
 		echo '<form method="post" action="'.DATAFACE_SITE_HREF.'">
@@ -123,11 +123,12 @@ class modules_ShoppingCart {
 			} else {
 				$redirect = '';
 			}
+			$qty = ( isset($params['quantity'])? $params['quantity']: 1);
 			echo <<<END
 			<div>
 				<form method="post" action="{$_SERVER['PHP_SELF']}">
 					<input type="hidden" name="-action" value="add_to_cart" />
-					Qty: <input type="text" size="2" name="--quantity" value="1" />
+					Qty: <input type="text" size="2" name="--quantity" value="$qty" />
 					<input type="hidden" name="--record_id" value="$record_id" />
 					<input type="submit" name="submit" value="Add to Cart" />
 					$redirect
@@ -438,6 +439,120 @@ END;
 		return $weight;
 	}
 	
+	/**
+	 * Returns the dimensions of the items in the shopping cart.
+	 * @return array(
+	 *	'width'=>array(float), 
+	 *	'height'=>array(float), 
+	 *	'length'=>array(float), 
+	 *	'weight'=>array(float)
+	 *	)
+	 */
+	function getDimensions(){
+		$delegate = Dataface_Application::getInstance()->getDelegate();
+		
+		$widths = array();
+		$heights = array();
+		$lengths = array();
+		$weights = array();
+		
+		$cart = ShoppingCartFactory::getFactory()->loadCart();
+		import('Dataface/Ontology.php');
+		Dataface_Ontology::registerType('InventoryItem', 'modules/ShoppingCart/Ontology/InventoryItem.php', 'modules_ShoppingCart_Ontology_InventoryItem');
+		
+		$items = array();	// An array to group items by table.
+		
+		// Let's go through the items in the shopping cart and group them by table
+		foreach ($cart->items as $item){
+			$parts = df_parse_uri($item->productID);
+			$table =& Dataface_Table::loadTable($parts['table']);
+			$tdel =& $table->getDelegate();
+			if ( isset($tdel) and method_exists($tdel, 'ShoppingCart__getDimensions') ){
+				// The table delegate class defines its own algorithm for calculating dimensions.
+				// so we group all items of this table together.
+				$items[$parts['table']][] = $item;
+			} else {
+				// The table delegate does not define its own algorithm for calculating
+				// dimensions so we will just group it with the rest of the items
+				// for its dimensions to be either calculated by the application 
+				// delegate or using the default shopping cart algorithm.
+				$items['-'][] = $item;
+			}
+			unset($table);
+			unset($parts);
+			unset($tdel);
+			
+		}
+		
+		if ( isset($items['-']) and isset($delegate) and method_exists($delegate, 'ShoppingCart__getDimensions') ){
+			$dims = $delegate->ShoppingCart__getDimensions($items['-']);
+			$widths = array_merge($widths, $dims['width']);
+			$heights = array_merge($heights, $dims['height']);
+			$lengths = array_merge($lengths, $dims['length']);
+			$weights = array_merge($weights, $dims['weight']);
+		} else {
+		
+	
+		
+			foreach ($items['-'] as $item){
+				$product = df_get_record_by_id($item->productID);
+				
+				if ( !$product ){
+					return PEAR::raiseError("Could not calculate dimensions because product ".$item->productID." could not be loaded.");
+				}
+				$ontology = Dataface_Ontology::newOntology('InventoryItem', $product->_table->tablename);
+				if ( PEAR::isError($ontology) ){
+					return $ontology;
+				}
+				$inventoryItem = $ontology->newIndividual($product);
+				$width = $inventoryItem->val('width');
+				$height = $inventoryItem->val('height');
+				$length = $inventoryItem->val('length');
+				$weight = $inventoryItem->val('weight');
+				
+				for ( $i=0; $i<$item->quantity; $i++ ){
+					
+					$weights[] = is_null($weight) ? null : floatval($weight);
+					$heights[] = is_null($height) ? null : floatval($height);
+					$lengths[] = is_null($length) ? null : floatval($length);
+					$widths[] = is_null($width) ? null : floatval($width);
+				}
+				unset($product);
+				unset($ontology);
+				unset($inventoryItem);
+				unset($width);
+				unset($height);
+				unset($length);
+				unset($width);
+				
+			}
+		}
+		foreach ($items as $tablename=>$titems){
+			if ( $tablename == '-' ) continue;
+			$table =& Dataface_Table::loadTable($tablename);
+			$tdel =& $table->getDelegate();
+			if ( isset($tdel) and method_exists($tdel, 'ShoppingCart__getDimensions') ){
+				$dims = $tdel->ShoppingCart__getDimensions($titems);
+				$widths = array_merge($widths, $dims['width']);
+				$heights = array_merge($heights, $dims['height']);
+				$lengths = array_merge($lengths, $dims['length']);
+				$weights = array_merge($weights, $dims['weight']);
+			}
+			unset($table);
+			unset($tdel);
+		}
+		
+		$out =  array(
+			'width' => $widths,
+			'length' => $lengths,
+			'height' => $heights,
+			'weight' => $weights
+			);
+		//print_r($out);
+		return $out;
+	
+	}
+	
 	
 	/**
 	 * Indicates whether shipping is mandatory for the shopping cart.
@@ -523,7 +638,7 @@ END;
 		$handler = $this->getShippingHandler();
 		$method = $this->getShippingMethod();
 		if ( $handler and $method ){
-			return $handler->calculateShipping($method->val('shipping_method_name'), $params);
+			return $handler->calculateShipping($method->val('shipping_method_name'), array_merge($method->vals(), $params));
 		}
 	}
 	

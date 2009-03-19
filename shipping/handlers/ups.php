@@ -85,18 +85,45 @@ class modules_ShoppingCart_shipping_handlers_ups {
 	
 	function calculate($params=array()){
 		
+		if ( !isset($params['ups.developerKey']) or
+			!isset($params['ups.username']) or
+			!isset($params['ups.password']) or
+			!isset($params['ups.accountNumber']) ){
+			trigger_error("Make sure that the ups.developerKey, ups.username, ups.password, and ups.accountNumber values are set in the [ShoppingCart] section of the conf.ini file.", E_USER_ERROR);
+			return PEAR::raiseError("Make sure that the ups.developerKey, ups.username, ups.password, and ups.accountNumber values are set in the [ShoppingCart] section of the conf.ini file.");
+		}
+		
 		$scTool = Dataface_ModuleTool::getInstance()->loadModule('modules_ShoppingCart');
 		$cart = ShoppingCartFactory::getFactory()->loadCart();
 		
-		$weight = $scTool->getTotalWeight();
-		print_r($params);
-		$price = $this->getUPSprice(
-			$params['shipType'],
+		//$weight = $scTool->getTotalWeight();
+		$dimensions = $scTool->getDimensions();
+		print_r($dimensions);
+		//print_r($dimensions);exit;
+		if ( PEAR::isError($dimensions) ){
+			return $dimensions;
+		}
+		require_once dirname(__FILE__).'/ups.lib/ups-php/upsRate.php';
+		$rate = new upsRate;
+		$rate->setCredentials(
+			$params['ups.developerKey'],
+			$params['ups.username'],
+			$params['ups.password'],
+			$params['ups.accountNumber']);
+		
+		$price = $rate->getRate(
+			$params['source.country'],
+			$params['dest.country'],
 			$params['source.postalCode'],
 			$params['dest.postalCode'],
-			$params['dest.country'],
-			$weight
+			11,
+			$dimensions['length'],
+			$dimensions['width'],
+			$dimensions['height'],
+			$dimensions['weight']
 		);
+		
+		//echo "Price: $price";exit;
 		
 		$item = ShoppingCartFactory::getFactory()->newItem();
 		$item->productID = 'UPS_'.$params['shipType'];

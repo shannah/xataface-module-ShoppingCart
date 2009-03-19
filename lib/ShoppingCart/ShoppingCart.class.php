@@ -300,10 +300,14 @@ class ShoppingCartItem {
 		return @$this->taxes[$taxname];
 	}
 	
-	function tax($taxPercents = array()){
+	function tax($taxPercents = array(), $onSubtotal=true){
 		$amount = 0.0;
 		foreach ( $taxPercents as $name=>$percent ){
-			if ( @$this->taxes[$name] ) $amount += round( floatval($percent) * $this->subtotal(), 2 );
+			if ($onSubtotal){
+				if ( @$this->taxes[$name] ) $amount += round( floatval($percent) * $this->subtotal(), 2 );
+			} else {
+				if (@$this->taxes[$name] ) $amount += round(floatval($percent)*floatval($this->unitPrice),2);
+			}
 		}
 		return $amount;
 	}

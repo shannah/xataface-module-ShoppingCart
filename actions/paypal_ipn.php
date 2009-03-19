@@ -61,7 +61,12 @@ class actions_paypal_ipn {
 				'phone' => $p->ipn_data['contact_phone'],
 				'email' => $p->ipn_data['payer_email']
 			));
-				
+			
+			if ( !$invoice->val('username') ){
+				// If there is no username, we should generate one and create
+				// an accompanying user account
+			}
+			
 			
 			if ( $p->ipn_data['payment_status'] == 'Completed' ){
 				$invoice->setValue('status', 'PAID');
