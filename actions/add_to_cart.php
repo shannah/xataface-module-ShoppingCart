@@ -59,7 +59,7 @@ class actions_add_to_cart {
 			
 			$item->productID = $record->getId();
 			$item->description = $inventoryItem->strval('description');
-			if ( !isset($item->description) ) $item->description = $record->getTitle();
+			if ( !isset($item->description) or !$item->description) $item->description = $record->getTitle();
 			if ( @$_POST['--quantity'] ) $item->quantity = intval($_POST['--quantity']);
 			$item->unitPrice = $inventoryItem->val('unitPrice');
 			if ( $record->_table->hasField( $ontology->getFieldname('taxes') ) ){
