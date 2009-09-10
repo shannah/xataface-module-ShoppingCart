@@ -36,8 +36,20 @@ class Dataface_modules_ShoppingCart_paymentHandlers_paypal {
 		else $appid = '0';
 		
 		
+		
 		$cart = unserialize($invoice->val('data'));
 		$action =& $params['action'];
+		
+		if ( !isset($app->_conf['ShoppingCart']) ) $app->_conf['ShoppingCart'] = array();
+		$del =& $app->getDelegate();
+		if ( method_exists($del, 'getShoppingCartSettings') ){
+			$res = $del->getShoppingCartSettings();
+			if ( is_array($res) ){
+				$app->_conf['ShoppingCart'] = array_merge($app->_conf['ShoppingCart'], $res);
+			}
+		}
+		
+		$action = array_merge($action, $app->_conf['ShoppingCart']);
 		
 		if ( !isset($action['paypal.account']) ){
 			return PEAR::raiseError("No paypal account is specified in the conf.ini file.");
@@ -50,6 +62,9 @@ class Dataface_modules_ShoppingCart_paymentHandlers_paypal {
 		require_once DATAFACE_PATH.'/modules/ShoppingCart/lib/paypal.class.php';
 		
 		$p = new paypal_class;
+		if ( isset($action['paypal.url']) ){
+			$p->paypal_url = $action['paypal.url'];
+		}
 		
 		$p->add_field('business', $action['paypal.account']);
 		$p->add_field('cmd', '_cart');
